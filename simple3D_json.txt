@@ -1,0 +1,44 @@
+Syntax for simple3D JSON format, version 1
+
+<world> := { -- The <world> object holds the description of simple3D scene
+"type" : "world",
+"format" : "simple3D.1",
+"light": {"color" : "#rrggbb", "position" : [<x>, <y>, <z>]}, -- color is optional (default is #FFFFFF)
+"camera": {"position" : [<x>, <y>, <z>]}
+"nodes": [<node>, <node>...], -- Holds all transformation/structure data
+"meshes": [<mesh>, <mesh>...] -- optional, holds all user defined geometry data
+"userdata": { ... } -- optional JSON object, container for transparent user data, not used by 3D engine
+}
+
+<node> := { -- The <node> object holds all the structural and positional data. It references either a mesh by its ID ("meshID") or a native shape ("shape").
+"type" : "node",
+"id" : <string>, 
+"color" : "#rrggbb",
+"colorList" : [<color>, <color>,...], -- optional, used to apply specific colors to polygons with colorIndex 
+"meshID" : <string>, -- optional, reference to a <mesh> defined in the 'meshes' array
+"shape" : <shape-name>, -- optional, reference to native shape
+"shapeArguments" : <object>, -- optional, defines parameters for the native shape (TODO)
+"translation" : [<x>, <y>, <z>], -- optional
+"rotationX" : <angle> -- optional
+"rotationY" : <angle> -- optional
+"rotationZ" : <angle> -- optional
+"scale" : [<sx>, <sy>, <sz>], -- optional
+"transformationMatrix": [[<x>, <y>, <z>, <w>],[<x>, <y>, <z>, <w>],[<x>, <y>, <z>, <w>],[<x>, <y>, <z>, <w>]] -- optional, not used together with translation/scale/rotationX/rotationY/rotationZ
+}
+
+<mesh> := { -- The <mesh> object is purely geometric, it holds only geometry data.
+"type" : "mesh",
+"id" : <string>,
+"vertices": [<vertex>, <vertex>...],
+"polygons": [<polygon>, <polygon>...],
+"source": <path to library file with vertex and polygons> -- optional (TODO)
+}
+
+<shape-name> : "cube" | "pyramid" | "sphere" | "cylinder" | "cone" | "square"
+
+<vertex> := [<x>, <y>, <z>]
+
+<polygon> := {
+"indexes": [<index>, <index>...],
+"colorIndex" : <index to colorList in parent node> -- optional
+}
