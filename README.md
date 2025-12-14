@@ -41,7 +41,7 @@ Interactive demo
 The class Scene3D implements basic interactive demo of the features built in simple3d engine.
 Keyboard controls for camera movement using arrows(up/down/left/right) and shift key are included.
 Shift + up arrow: move camera higher; Shift + down arrow: move camera lower
-Shift + rigth arrow: rotate camera right; Shift + left arrow: rotate camera left
+Shift + right arrow: rotate camera right; Shift + left arrow: rotate camera left
 
 Compile:
 ```
