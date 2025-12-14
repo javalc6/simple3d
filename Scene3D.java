@@ -28,6 +28,7 @@ import java.awt.Graphics;
 import java.awt.Polygon;
 import java.awt.event.*;
 import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -50,13 +51,14 @@ import simple3d.*;
  *
  * Keyboard controls for camera movement using arrows(up/down/left/right) and shift key are included.
  * Shift + up arrow: move camera higher; Shift + down arrow: move camera lower
- * Shift + rigth arrow: rotate camera right; Shift + left arrow: rotate camera left
+ * Shift + right arrow: rotate camera right; Shift + left arrow: rotate camera left
  *
  * To run: Save as Scene3D.java, compile, and run:
  * javac Scene3D.java
  * java Scene3D
  *
  * v1.0, 12-12-2025: first release
+ * v1.0.1, 14-12-2025: added menu bar for file handling and help
  */
 
 public class Scene3D extends JFrame {
@@ -66,7 +68,7 @@ public class Scene3D extends JFrame {
 
 	private final static boolean print_statistics = true;
 
-	private final Engine3D engine;
+	private Engine3D engine;
     private final Renderer canvas;
 
 	private final static double FOV = Math.toRadians(60); // Field of View
@@ -79,6 +81,7 @@ public class Scene3D extends JFrame {
         setLocationRelativeTo(null);
 		setLayout(new BorderLayout());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setupMenuBar(); fc = create_fc();
 
         // Setup the rendering canvas
         canvas = new Renderer(WIDTH, HEIGHT, this, skyColor, groundColor);
@@ -92,6 +95,165 @@ public class Scene3D extends JFrame {
         setVisible(true);
     }
 
+// -- setup Menu Bar --
+	private void setupMenuBar() {
+		JMenuBar menuBar = new JMenuBar();
+		menuBar.add(buildFileMenu());
+		menuBar.add(buildHelpMenu());
+		setJMenuBar(menuBar);	
+	}
+
+	private static JFileChooser fc = null;
+	private JFileChooser create_fc() {
+        String userDirLocation = System.getProperty("user.dir");
+        File userDir = new File(userDirLocation);
+		JFileChooser fc = new JFileChooser(userDir);
+		fc.setFileFilter(new javax.swing.filechooser.FileFilter() {
+			public String getDescription() { return "gz files"; }
+			public boolean accept(File f) {
+				return f.getName().toLowerCase().endsWith (".gz") || f.isDirectory ();
+			}
+		});
+		return fc;
+	}
+
+// -- File Menu --
+    protected JMenu buildFileMenu() {
+		JMenu file = new JMenu("File");
+		JMenuItem open = new JMenuItem("Open...");
+		JMenuItem save = new JMenuItem("Save");
+		JMenuItem saveas = new JMenuItem("Save As...");
+		JMenuItem quit = new JMenuItem("Quit");
+
+// Begin "Open"
+		open.addActionListener(new ActionListener() {
+		   public void actionPerformed(ActionEvent e) {
+				int returnVal = fc.showOpenDialog(Scene3D.this);
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+					try	{ 	
+						File file = fc.getSelectedFile();
+						String fname = file.getPath();
+						Color skyColor = new Color(130, 210, 230);// Sky color
+						Color groundColor = new Color(140, 60, 20);// Ground level color
+						Engine3D new_engine = new Engine3D(print_statistics);
+						JSONObject userdata = new_engine.importFile(fname);
+						if (userdata != null) {
+							JSONValue _skyColor = userdata.get("skycolor");
+							if (_skyColor != null) {
+								skyColor = colorParser((String)_skyColor.toJava());
+							}
+							JSONValue _groundColor = userdata.get("groundcolor");
+							if (_groundColor != null) {
+								groundColor = colorParser((String)_groundColor.toJava());
+							}
+						}
+						engine = new_engine;
+						canvas.setup(skyColor, groundColor);
+						canvas.repaint();
+					}	catch (json.JSONException | IOException ex) {
+						JOptionPane.showMessageDialog(Scene3D.this, ex.getMessage(),"Open failed",JOptionPane.ERROR_MESSAGE);
+					}   catch (Exception ex) {
+						ex.printStackTrace();
+					}
+                }
+		   }
+		});
+		open.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ActionEvent.CTRL_MASK));
+// End "Open"
+
+// Begin "Save"
+		save.addActionListener(new ActionListener() {
+		   public void actionPerformed(ActionEvent e) {
+				   try {
+						savefile(engine.getFileName());
+				   } catch (IOException ex) {    
+						JOptionPane.showMessageDialog(Scene3D.this, ex.getMessage(),"Save failed",JOptionPane.ERROR_MESSAGE);
+				   }
+		   }
+		});
+		save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
+// End "Save"
+
+// Begin "SaveAs"
+		saveas.addActionListener(new ActionListener() {
+		   public void actionPerformed(ActionEvent e) {
+				int returnVal = fc.showSaveDialog(Scene3D.this);
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+					try {
+						String fname = fc.getSelectedFile().getPath();
+						if (!fname.endsWith(".gz"))
+							fname += ".gz";
+						savefile(fname);
+					} catch (IOException ex) {    
+						JOptionPane.showMessageDialog(Scene3D.this, ex.getMessage(),"Save failed",JOptionPane.ERROR_MESSAGE);
+					}
+				}
+		   }
+		});
+// End "SaveAs"
+
+// Begin "Quit"
+		quit.addActionListener(new ActionListener() {
+		   public void actionPerformed(ActionEvent e) {
+			   Scene3D.this.dispose();
+		   }
+		});
+// End "Quit"
+
+		file.add(open);
+		file.addSeparator();
+		file.add(save);
+		file.add(saveas);
+		file.addSeparator();
+		file.add(quit);
+		return file;
+    }
+
+	protected void savefile(String filename) throws IOException {
+		Color skyColor = canvas.getSkyColor();
+		Color groundColor = canvas.getGroundColor();
+		if (skyColor != null || groundColor != null) {
+			LinkedHashMap<String, Object> userdata = new LinkedHashMap<>();
+			if (skyColor != null)
+				userdata.put("skycolor", colorToString(skyColor));
+			if (groundColor != null)
+				userdata.put("groundcolor", colorToString(groundColor));
+			engine.exportFile(filename, new JSONObject(userdata));					
+		} else engine.exportFile(filename);
+	}
+
+// -- Help Menu --
+	protected JMenu buildHelpMenu() {
+		JMenu help = new JMenu("Help");
+		JMenuItem openHelp = new JMenuItem("Help Topics...");
+		JMenuItem openInfo = new JMenuItem("Info...");
+
+		openHelp.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(
+					Scene3D.this,
+					"Use Keyboard controls to move camera.\nUp arrow: move camera forward; Down arrow: move camera backward.\nLeft arrow: move camera strafe left; Right arrow: move camera strafe right.\nShift + up arrow: move camera higher; Shift + down arrow: move camera lower\nShift + right arrow: rotate camera right; Shift + left arrow: rotate camera left",
+					"Help",
+					JOptionPane.INFORMATION_MESSAGE
+				);
+			}
+		});
+		openInfo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(
+					Scene3D.this,
+					engine.getInfo(false),
+					"Information",
+					JOptionPane.INFORMATION_MESSAGE
+				);
+			}
+		});
+
+		help.add(openHelp);
+		help.add(openInfo);
+		return help;
+	}
+
     // --- Main Renderer Panel Class ---
     private class Renderer extends JPanel implements KeyListener {
 		final Scene3D scene3D;
@@ -103,7 +265,8 @@ public class Scene3D extends JFrame {
         private final double moveSpeed = 0.5;
 
 		private final Polygon screenPoly = new Polygon(); // Reusable AWT Polygon to offload paint()
-		private final Color skyColor;
+		private Color skyColor;
+		private Color groundColor;
 
 		// Statistics
 		private final float[] timings = {-1, 0}; //min and max rendering time in ms
@@ -112,14 +275,26 @@ public class Scene3D extends JFrame {
 
         public Renderer(int width, int height, Scene3D scene3D, Color skyColor, Color groundColor) {
             setPreferredSize(new Dimension(width, height));
+			addKeyListener(this);
+			this.scene3D = scene3D;
+			setup(skyColor, groundColor);
+        }
+
+		protected void setup(Color skyColor, Color groundColor) {
 			if (groundColor != null) {
 				setBackground(groundColor);
-				addKeyListener(this);
 			}
+			this.groundColor = groundColor;
 			this.skyColor = skyColor;
 			engine.setupScene(FOV, ASPECT_RATIO);
-			this.scene3D = scene3D;
-        }
+		}
+
+		protected Color getSkyColor() {
+			return skyColor;
+		}
+		protected Color getGroundColor() {
+			return groundColor;
+		}
 
         @Override
         protected void paintComponent(Graphics g) {
@@ -330,20 +505,6 @@ public class Scene3D extends JFrame {
 				engine.setCameraPos(new Vector3D(0, 1.7, -10));
 				buildWorld(engine);
 			}
-/* how to save scene on file:
-			try	{
-				if (skyColor != null || groundColor != null) {
-					LinkedHashMap<String, Object> userdata = new LinkedHashMap<>();
-					if (skyColor != null)
-						userdata.put("skycolor", colorToString(skyColor));
-					if (groundColor != null)
-						userdata.put("groundcolor", colorToString(groundColor));
-					engine.exportFile("scene.json.gz", new JSONObject(userdata));					
-				} else engine.exportFile("scene.json.gz");
-			} catch (IOException ex) {
-				System.out.println(ex);
-			}
-*/			
 			new Scene3D("3D scene", engine, skyColor, groundColor);
         });
     }

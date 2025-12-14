@@ -88,6 +88,8 @@ public class Engine3D {
 
 	private final static double Z_NEAR = 0.1;
 
+	private String filename = "notitle.json.gz";
+
 	public Engine3D(boolean print_statistics) {
 		this.print_statistics = print_statistics;
 	}
@@ -125,7 +127,7 @@ public class Engine3D {
 		Matrix4x4.createProjection(FOV, ASPECT_RATIO, matProj);
 
 		if (print_statistics)
-			printInfo(sceneNodes, meshes);
+			System.out.println(getInfo(true));
 // Consolidate all polygons into one list to build BSP tree
 		List<Polyface3D> allPolygons = new ArrayList<>();
 		for (Node node : sceneNodes) {
@@ -308,8 +310,13 @@ public class Engine3D {
 					meshes.put(mesh.id, mesh);
 				}
 			}
+			this.filename = filename;
 			return (JSONObject) world.get("userdata");
         }
+	}
+
+	public String getFileName() {
+		return filename;
 	}
 
 	/**
@@ -357,6 +364,7 @@ public class Engine3D {
             gos.write(out.toString().getBytes(StandardCharsets.UTF_8));
             gos.finish();
         }
+		this.filename = filename;
 	}
 
 	/**
@@ -486,47 +494,53 @@ public class Engine3D {
 		return new Vector3D(x, y, z, Z_NEAR);
 	}
 
-	private static void printOnce(String message, HashSet<String> messages) {
+	private static void printOnce(String message, HashSet<String> messages, StringBuilder sb) {
 		if (!messages.contains(message)) {
-			System.out.println(message);
+			sb.append(message).append('\n');
 			messages.add(message);
 		}
 	}
 
 	/**
-     * Print information about current scene
+     * Get information about current scene
 	 */
-	public static void printInfo(List<Node> sceneNodes, HashMap<String, Mesh> meshes) {
+	public String getInfo(boolean fullchecks) {
 		int n_nodes = sceneNodes.size();
 		int n_polygons = 0;
 		int n_vertices = 0;
 		int n_unconnectedParts = 0;
+		StringBuilder sb = new StringBuilder(64);
 		HashSet<String> messages = new HashSet<>();
 		for (Node node : sceneNodes) {
 			Mesh mesh = meshes.get(node.meshID);
 			if (mesh == null) {
-				if (node.shape == null)
-					throw new RuntimeException("Error: unknown mesh id " + node.meshID);
-				else mesh = Mesh.getShapeInstance(node.shape);
+				if (node.shape == null) {
+					printOnce("Error: unknown mesh id " + node.meshID, messages, sb);
+					continue;
+				} else mesh = Mesh.getShapeInstance(node.shape);
 			}
 			n_polygons += mesh.polygons.size();
 			n_vertices += mesh.vertices.length;
 			int n_unconnected = mesh.getNumberUnconnectedParts();
 			n_unconnectedParts += n_unconnected;
-			if (n_unconnected > 0)
-				printOnce("Warning: unconnected part found in mesh " + mesh.id, messages);
+			if (fullchecks) {		
+				if (n_unconnected > 0)
+					printOnce("Warning: unconnected part found in mesh " + mesh.id, messages, sb);
 
-			if (!mesh.checkCorrectness())
-				printOnce("Error found in mesh " + mesh.id, messages);
+				if (!mesh.checkCorrectness())
+					printOnce("Error found in mesh " + mesh.id, messages, sb);
 
-			if (!mesh.checkManifold())
-				printOnce("Warning: mesh " + mesh.id + " is not manifold", messages);			
+				if (!mesh.checkManifold())
+					printOnce("Warning: mesh " + mesh.id + " is not manifold", messages, sb);			
+			}
 		}
-		System.out.println("Number of nodes: " + n_nodes);
-		System.out.println("Number of user defined meshes: " + meshes.size());
-		System.out.println("Number of polygons: " + n_polygons);
-		System.out.println("Number of vertices: " + n_vertices);
-		System.out.println("Number of unconnected parts: " + n_unconnectedParts);
+		sb.append("Number of nodes: ").append(n_nodes).append('\n');
+		sb.append("Number of user defined meshes: ").append(meshes.size()).append('\n');
+		sb.append("Number of polygons: ").append(n_polygons).append('\n');
+		sb.append("Number of vertices: ").append(n_vertices).append('\n');
+		if (n_unconnectedParts > 0)
+			sb.append("Number of unconnected parts: ").append(n_unconnectedParts);
+		return sb.toString();
 	}
 
 }
