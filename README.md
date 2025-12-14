@@ -1,14 +1,19 @@
 Simple 3D Graphic Engine
 ========================
-Java package 'simple3D' implements a simple software 3D renderer, ideal for low-poly rendering. The package is 100% java.
-The package can be used togheter with AWT/Swing/JavaFX/Android or other Java graphic environments as it does not have any specific dependency.
+Java package 'simple3D' implements a simple software 3D renderer, ideal for low-poly rendering.
+
+This package, 100% java, can be used togheter with AWT/Swing/JavaFX/Android or other Java graphic environments as it does not have any specific dependency.
 
 Features
 ========
 ♦ Simple yet flexible data model based on nodes and meshes \
 ♦ Binary Space Partitioning for fast rendering \
 ♦ Perspective projection with basic flat shading \
-♦ Read and write scene on filesystem using JSON data format \
+♦ Read and write scene on filesystem using JSON data format
+
+Screenshots
+===========
+![Screenshot](images/town.png)
 
 Work flow
 =========
@@ -93,10 +98,10 @@ engine.render3D(cameraYaw, getWidth(), getHeight(), (projectedVertices, color) -
 
 File Format
 ===========
-The JSON format for the simple 3D files is described in simple3D_json.txt
+The JSON format for the simple 3D files is described in [simple3D_json.txt](simple3D_json.txt)
 
 Limitations of current release compared to version 1 of 3dscene_json.txt:
-- parameter "source" to import library file is not implemented. TODO
-- parameter "shapeArguments" to specify parameters for native shapes is not implemented. TODO
-- in case of malformed json content the behavior of the application is unspecified. TODO
+- parameter "source" to import library file is not implemented. *TODO*
+- parameter "shapeArguments" to specify parameters for native shapes is not implemented. *TODO*
+- in case of malformed json content the behavior of the application is unspecified. *TODO*
 
