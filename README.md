@@ -11,8 +11,8 @@ Features
 ♦ Perspective projection with basic flat shading \
 ♦ Read and write scene on filesystem using JSON data format
 
-Screenshots
-===========
+Rendering example
+=================
 ![Screenshot](images/town.png)
 
 Work flow
@@ -102,6 +102,11 @@ The JSON format for the simple 3D files is described in [simple3D_json.txt](simp
 
 Limitations of current release compared to version 1 of 3dscene_json.txt:
 - parameter "source" to import library file is not implemented. *TODO*
-- parameter "shapeArguments" to specify parameters for native shapes is not implemented. *TODO*
 - in case of malformed json content the behavior of the application is unspecified. *TODO*
 
+
+Other screenshots
+=================
+![Screenshot](images/512-spheres.png)
+
+![Screenshot](images/demo.png)
