@@ -13,6 +13,8 @@ Features
 
 Rendering example
 =================
+Running *java Scene3D town.json.gz*
+
 ![Screenshot](images/town.png)
 
 Work flow
