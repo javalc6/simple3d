@@ -34,7 +34,8 @@ import java.util.Map;
 import json.*;
 /**
  * Mesh is a collection of polygons. It is purely geometric data.
- * v1.0 12-12-2025: first release
+ * v1.0   12-12-2025: first release
+ * v1.0.1 17-12-2025: new shape regularPolygon and new method extrudePolygonMesh to extrude polygons
  */
 public class Mesh implements Dumpable {
 	String id;
@@ -47,11 +48,15 @@ public class Mesh implements Dumpable {
 		pyramid,
 		cone,
 		cylinder,
-		sphere;
+		sphere,
+		regularPolygon,
 	}
 
-	final static HashMap<Shape, Mesh> shapes = new HashMap<>();
+	final static HashMap<Shape, Mesh> immutable_shapes = new HashMap<>();
 
+	/**
+     * Create a mesh from vertices and polygons
+	 */
 	public static Mesh createMesh(String id, Vector3D[] vertices, List<Polygon3D> polygons) {
 		Mesh m = new Mesh(id, vertices); 
 		m.polygons.addAll(polygons);
@@ -61,20 +66,99 @@ public class Mesh implements Dumpable {
 		return m;
 	}
 
-	public static Mesh getShapeInstance(String shape) {
-		return getShapeInstance(Shape.valueOf(shape));
+	/**
+     * Create a mesh by extruding a mesh containing only one polygon
+	 * The original polygon is extruded along its normal
+	 * The extruded mesh is obtained using the flipped original polygon as a base and adding walls and a cap
+	 */
+	public static Mesh extrudePolygonMesh(String id, Mesh source, Double distance) {
+		if (source.polygons.size() > 1) throw new IllegalArgumentException("Too many polygons, only one allowed");
+		int n_source_vertices = source.vertices.length;
+		Vector3D[] vertices = new Vector3D[n_source_vertices * 2];
+		for (int i = 0; i < n_source_vertices; i++)
+			vertices[i] = source.vertices[i].clone();
+		
+		ArrayList<Polygon3D> polygons = new ArrayList<>();
+        Polygon3D polygon = source.polygons.get(0);
+		Vector3D P0 = vertices[polygon.vertex_indexes[0]];
+		Vector3D P1 = vertices[polygon.vertex_indexes[1]];
+		Vector3D P2 = vertices[polygon.vertex_indexes[2]];
+
+		// Edges E01 = P1 - P0 and E12 = P2 - P1
+		Vector3D E01 = P1.subtract(P0, new Vector3D(0, 0, 0));
+		Vector3D E12 = P2.subtract(P1, new Vector3D(0, 0, 0));
+		// Normal multiplied by distance
+		Vector3D N = E01.cross(E12).normalize().multiply(distance);
+
+		// Add polygon displaced by distance as cap
+		Integer[] vertex_indexes = new Integer[n_source_vertices];
+		for (int i = 0; i < n_source_vertices; i++) {
+			vertex_indexes[i] = polygon.vertex_indexes[i] + n_source_vertices;
+			Vector3D vertex = source.vertices[i].clone();
+			vertex.add(N);
+			vertices[i + n_source_vertices] = vertex;
+		}
+		Polygon3D displaced = new Polygon3D(null, vertex_indexes);
+		if (polygon.colorIndex != null)
+			displaced.setColorIndex(polygon.colorIndex);
+		polygons.add(displaced);
+
+		// Add lateral rectangles as walls
+		for (int i = 0; i < n_source_vertices; i++) {
+			vertex_indexes = new Integer[4];
+			vertex_indexes[0] = polygon.vertex_indexes[i];
+			vertex_indexes[1] = polygon.vertex_indexes[(i + 1) % n_source_vertices];
+			vertex_indexes[2] = displaced.vertex_indexes[(i + 1) % n_source_vertices];
+			vertex_indexes[3] = displaced.vertex_indexes[i];
+			Polygon3D poly = new Polygon3D(null, vertex_indexes);
+			if (polygon.colorIndex != null)
+				poly.setColorIndex(polygon.colorIndex);
+			polygons.add(poly);
+		}
+
+		// Add flipped polygon
+		vertex_indexes = new Integer[n_source_vertices];
+		for (int i = 0; i < n_source_vertices; i++) {
+			vertex_indexes[i] = polygon.vertex_indexes[n_source_vertices - i - 1];
+		}
+		Polygon3D poly = new Polygon3D(null, vertex_indexes);
+		if (polygon.colorIndex != null)
+			poly.setColorIndex(polygon.colorIndex);
+		polygons.add(poly);
+
+		return createMesh(id, vertices, polygons);
 	}
 
-	public static Mesh getShapeInstance(Shape shape) {
-		if (shapes.isEmpty())	{
-			shapes.put(Shape.cube, createCube());
-			shapes.put(Shape.pyramid, createPyramid());
-			shapes.put(Shape.sphere, createSphere(4));//N4 = N / 4
-			shapes.put(Shape.cylinder, createCylinder(16));
-			shapes.put(Shape.cone, createCone(16));
-			shapes.put(Shape.square, createSquare());
+	/**
+     * Return a mesh as instance of shape using String format
+	 */
+	public static Mesh getShapeInstance(String shape) {
+		return getShapeInstance(Shape.valueOf(shape), null);		
+	}
+
+	public static Mesh getShapeInstance(String shape, String shapeArguments) {
+		try {
+			return getShapeInstance(Shape.valueOf(shape), new JSONObject(shapeArguments));		
+		} catch (JSONException e) {
+			throw new IllegalArgumentException("Incorrect arguments", e);
 		}
-		return shapes.get(shape);
+	}
+
+	/**
+     * Return a mesh as instance of shape using native format
+	 */
+	public static Mesh getShapeInstance(Shape shape, JSONObject shapeArguments) {
+		if (shape.equals(Shape.regularPolygon))
+			return createRegularPolygon(shapeArguments);
+		if (immutable_shapes.isEmpty())	{
+			immutable_shapes.put(Shape.cube, createCube());
+			immutable_shapes.put(Shape.pyramid, createPyramid());
+			immutable_shapes.put(Shape.sphere, createSphere(4));//N4 = N / 4
+			immutable_shapes.put(Shape.cylinder, createCylinder(16));
+			immutable_shapes.put(Shape.cone, createCone(16));
+			immutable_shapes.put(Shape.square, createSquare());
+		}
+		return immutable_shapes.get(shape);
 	}
 
 //simple test to verify that all polygons in the mesh have same orientering
@@ -407,6 +491,33 @@ public class Mesh implements Dumpable {
 
 		//Polygons
 		m.polygons.add(new Polygon3D(m, 0, 1, 2, 3));
+
+		m.sanityCheck();//just in case
+		return m;
+	}
+
+	private static Mesh createRegularPolygon(JSONObject shapeArguments) {
+		if (shapeArguments == null) throw new IllegalArgumentException("shapeArguments is required");
+		JSONValue _N = shapeArguments.get("N");
+		if (_N == null) throw new IllegalArgumentException("shapeArguments shall include N");
+		int N = ((BigDecimal) _N.toJava()).intValueExact();
+		if (N < 3) throw new IllegalArgumentException("N shall be greater or equal to 3");
+
+		Mesh m = new Mesh("native:regularPolygon", N);
+		Integer[] vertexIndexes = new Integer[N];
+
+		double angle0 = Math.PI * (1.0 / N - 0.5);
+		double angle_step = -2.0 * Math.PI / N;
+		// radius is calculated in order to have unitary side
+		double radius = 0.5 / Math.sin(Math.PI / N);
+		// Vertices
+		for (int i = 0; i < N; i++) {
+			m.vertices[i] = new Vector3D(radius * Math.cos(angle0 + angle_step * i), 0, radius * Math.sin(angle0 + angle_step * i));
+			vertexIndexes[i] = i;
+		}
+
+		//Polygons
+		m.polygons.add(new Polygon3D(m, vertexIndexes));
 
 		m.sanityCheck();//just in case
 		return m;

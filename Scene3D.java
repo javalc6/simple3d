@@ -39,6 +39,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.*;
 import javax.swing.UIManager;
 
+import json.JSONException;
 import json.JSONObject;
 import json.JSONValue;
 
@@ -59,6 +60,7 @@ import simple3d.*;
  *
  * v1.0, 12-12-2025: first release
  * v1.0.1, 14-12-2025: added menu bar for file handling and help
+ * v1.0.2, 17-12-2025: new shape regularPolygon and extrude polygons
  */
 
 public class Scene3D extends JFrame {
@@ -414,6 +416,10 @@ public class Scene3D extends JFrame {
 
 		engine.addMesh(Mesh.createMesh("mycube", vertices, polygons));
 
+		//Extruded Mesh
+		engine.addMesh(Mesh.extrudePolygonMesh("extruded", Mesh.getShapeInstance("regularPolygon", "{\"N\":6}"), 1.0));
+
+
 		// Pyramids
 		Node pyr1 = new Node("pyr1", Mesh.Shape.pyramid, simple3d.Color.parse("#009090")); // Teal
 		pyr1.applyScale(1, 2, 1);
@@ -467,6 +473,37 @@ public class Scene3D extends JFrame {
 		base.applyScale(20, 1, 20);
 		base.applyTranslation(0, 0, 5);
 		sceneNodes.add(base);
+
+		// regular polygons, example related to shapeArguments
+		try {
+			for (int k = 3; k < 9; k++) {
+				simple3d.Color[] colors = {simple3d.Color.MAGENTA, simple3d.Color.RED, simple3d.Color.YELLOW, simple3d.Color.GREEN, simple3d.Color.CYAN, simple3d.Color.BLUE};
+				Node poly = new Node("poly" + k, Mesh.Shape.regularPolygon, new JSONObject("{\"N\":"+ k + "}"), colors[k - 3]);
+				poly.applyRotationX(Math.toRadians(-90));
+				poly.applyScale(8.0 / k, 8.0 / k, 1);
+				poly.applyTranslation(-16.5 + k * 3, 3, 5);
+				sceneNodes.add(poly);
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+
+		// Extruded
+		Node extruded = new Node("extruded1", "extruded", simple3d.Color.RED);
+		extruded.applyScale(0.5, 0.5, 0.5);
+		extruded.applyTranslation(-2, 1, 0);
+		sceneNodes.add(extruded);
+
+		Node extruded2 = new Node("extruded2", "extruded", simple3d.Color.GREEN);
+		extruded2.applyScale(0.5, 0.5, 0.5);
+		extruded2.applyTranslation(-2, 0.5, 0);
+		sceneNodes.add(extruded2);
+
+		Node extruded3 = new Node("extruded3", "extruded", simple3d.Color.BLUE);
+		extruded3.applyScale(0.5, 0.5, 0.5);
+		extruded3.applyTranslation(-2, 0, 0);
+		sceneNodes.add(extruded3);
+
 	}
 
 	public static void main(String[] args) {

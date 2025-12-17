@@ -32,11 +32,12 @@ import json.*;
  * Node is a structural object that holds the transformation, color,
  * and reference to a Mesh object.
  * v1.0 12-12-2025: first release
+ * v1.0.1 17-12-2025: added shapeArguments
  */
 public class Node implements Dumpable {
 	String id;
 	String meshID;
-	Mesh.Shape shape;
+	Mesh.Shape shape; JSONObject shapeArguments;
 	Color color;
 	Color[] colorList;
 	final Matrix4x4 worldMatrix = Matrix4x4.createIdentity();
@@ -47,11 +48,19 @@ public class Node implements Dumpable {
 		this.color = color;
 		this.colorList = colorList;
 	}
-	
+	//Node constructor for immutable shapes
 	public Node(String id, Mesh.Shape shape, Color color) {
 		this.id = id;
 		this.shape = shape;
 		this.color = color;
+	}
+
+	//Node constructor for shapes with arguments
+	public Node(String id, Mesh.Shape shape, JSONObject shapeArguments, Color color) {
+		this.id = id;
+		this.shape = shape;
+		this.color = color;
+		this.shapeArguments = shapeArguments;
 	}
 
 	public void setColorList(Color[] colorList) {
@@ -95,6 +104,7 @@ public class Node implements Dumpable {
 			if (_shape == null)
 				throw new RuntimeException("invalid data: either meshID or shape shall be defined");
 			shape = Mesh.Shape.valueOf((String)_shape.toJava());
+			shapeArguments = (JSONObject) node.get("shapeArguments");
 		}
 
 		JSONValue colorVal = node.get("color");
@@ -161,9 +171,11 @@ public class Node implements Dumpable {
 		node.put("id", id);
 		if (meshID != null)
 			node.put("meshID", meshID);
-		else if (shape != null)
+		else if (shape != null) {
 			node.put("shape", shape.toString());
-		else throw new RuntimeException("invalid data: either meshID or shape shall be defined");
+			if (shapeArguments != null)
+				node.put("shapeArguments", shapeArguments);
+		} else throw new RuntimeException("invalid data: either meshID or shape shall be defined");
 		
 		if (color != null) {
 			node.put("color", color.toString());

@@ -17,7 +17,7 @@ Syntax for simple3D JSON format, version 1
 "colorList" : [<color>, <color>,...], -- optional, used to apply specific colors to polygons with colorIndex 
 "meshID" : <string>, -- optional, reference to a <mesh> defined in the 'meshes' array
 "shape" : <shape-name>, -- optional, reference to native shape
-"shapeArguments" : <object>, -- optional, defines parameters for the native shape (TODO)
+"shapeArguments" : <object>, -- optional, defines parameters for native shape with arguments
 "translation" : [<x>, <y>, <z>], -- optional
 "rotationX" : <angle> -- optional
 "rotationY" : <angle> -- optional
@@ -34,7 +34,7 @@ Syntax for simple3D JSON format, version 1
 "source": <path to library file with vertex and polygons> -- optional (TODO)
 }
 
-<shape-name> : "cube" | "pyramid" | "sphere" | "cylinder" | "cone" | "square"
+<shape-name> : "cube" | "pyramid" | "sphere" | "cylinder" | "cone" | "square" | "regularPolygon"
 
 <vertex> := [<x>, <y>, <z>]
 
@@ -42,3 +42,6 @@ Syntax for simple3D JSON format, version 1
 "indexes": [<index>, <index>...],
 "colorIndex" : <index to colorList in parent node> -- optional
 }
+==============================
+Note for shapes with arguments
+- regularPolygon requires shapeArguments with integer N > 2 to specify number of sides

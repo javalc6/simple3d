@@ -52,6 +52,7 @@ import json.*;
  * CameraPitch is not implemented. Far objects are always processed like any objects instead of being skipped.
  *
  * v1.0 12-12-2025: first release
+ * v1.0.1 17-12-2025: added shapeArguments
  */
 
 public class Engine3D {
@@ -131,7 +132,7 @@ public class Engine3D {
 // Consolidate all polygons into one list to build BSP tree
 		List<Polyface3D> allPolygons = new ArrayList<>();
 		for (Node node : sceneNodes) {
-			Mesh mesh = node.meshID == null ? Mesh.getShapeInstance(node.shape) : meshes.get(node.meshID);
+			Mesh mesh = node.meshID == null ? Mesh.getShapeInstance(node.shape, node.shapeArguments) : meshes.get(node.meshID);
 			// Need to transform polygons to *World Space* before building the tree
 			for (Polygon3D poly : mesh.polygons) {
 				Vector3D[] vertices = new Vector3D[poly.vertex_indexes.length];
@@ -517,7 +518,7 @@ public class Engine3D {
 				if (node.shape == null) {
 					printOnce("Error: unknown mesh id " + node.meshID, messages, sb);
 					continue;
-				} else mesh = Mesh.getShapeInstance(node.shape);
+				} else mesh = Mesh.getShapeInstance(node.shape, node.shapeArguments);
 			}
 			n_polygons += mesh.polygons.size();
 			n_vertices += mesh.vertices.length;
