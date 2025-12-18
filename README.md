@@ -3,6 +3,7 @@ Simple 3D Graphic Engine
 Java package 'simple3D' implements a simple software 3D renderer, ideal for low-poly rendering.
 
 This package, 100% java, can be used togheter with AWT/Swing/JavaFX/Android or other Java graphic environments as it does not have any specific dependency.
+The simple3D package has been tested with Java 11 and Java 25.
 
 Features
 ========
