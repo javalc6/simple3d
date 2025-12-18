@@ -65,9 +65,9 @@ public class Polygon3D implements Dumpable {
 	public JSONValue save() {
 		LinkedHashMap<String, Object> poly = new LinkedHashMap<>();
 		JSONArray idxs = new JSONArray();
-		for (int i = 0; i < vertex_indexes.length; i++) {
-			idxs.add(new JSONNumber(BigDecimal.valueOf(vertex_indexes[i])));
-		}
+        for (Integer vertexIndex : vertex_indexes) {
+            idxs.add(new JSONNumber(BigDecimal.valueOf(vertexIndex)));
+        }
 		poly.put("indexes", idxs);
 		if (colorIndex != null)
 			poly.put("colorIndex", new JSONNumber(BigDecimal.valueOf(colorIndex)));

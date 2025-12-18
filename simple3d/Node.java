@@ -46,8 +46,7 @@ public class Node implements Dumpable {
 		this.id = id;
 		this.meshID = meshID;
 		this.color = color;
-		this.colorList = colorList;
-	}
+    }
 	//Node constructor for immutable shapes
 	public Node(String id, Mesh.Shape shape, Color color) {
 		this.id = id;
@@ -183,9 +182,9 @@ public class Node implements Dumpable {
 		
 		if (colorList != null) {
 			JSONArray colors = new JSONArray();
-			for (int i = 0; i < colorList.length; i++) {
-				colors.add(colorList[i].save());
-			}
+            for (Color value : colorList) {
+                colors.add(value.save());
+            }
 			node.put("colorList", colors);
 		}
 		

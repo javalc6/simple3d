@@ -176,9 +176,9 @@ public class Matrix4x4 implements Dumpable {
 	 * Transforms all vertices of polygon in-place
 	 */
 	public void transformInPlace(Vector3D[] vertices) {
-		for (int i = 0; i < vertices.length; i++) {
-			multiply(vertices[i], vertices[i]); // In-place vector-matrix multiplication
-		}
+        for (Vector3D vertex : vertices) {
+            multiply(vertex, vertex); // In-place vector-matrix multiplication
+        }
 	}
 
 	/**

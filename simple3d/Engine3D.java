@@ -62,8 +62,8 @@ public class Engine3D {
 		UP,
 		DOWN,
 		LEFT,
-		RIGHT;
-	}
+		RIGHT
+    }
 	private final boolean print_statistics;
 
 	private final ArrayList<Node> sceneNodes = new ArrayList<>(); //Objects
@@ -353,7 +353,7 @@ public class Engine3D {
 			_meshes.add(mesh.save());
 
 		}
-		if (_meshes != null && _meshes.size() > 0)
+		if (!_meshes.isEmpty())
 			world.put("meshes", new JSONArray(_meshes));
 
 		if (userdata != null)//transparent user data
@@ -382,8 +382,8 @@ public class Engine3D {
 		// 1. Transform directly by the combined View-Projection matrix
 
 		// Clip-space coordinates (before perspective divide)
-		for (int i = 0; i < vertices.length; i++)
-			matViewProj.multiply(vertices[i], vertices[i]); // In-place vector-matrix multiplication
+        for (Vector3D vertex : vertices)
+            matViewProj.multiply(vertex, vertex); // In-place vector-matrix multiplication
 
 		// 2. Near-Plane Clipping (w = Z_NEAR)
 		Vector3D[] clippedVertices = clipPolygonAgainstPlane(vertices);
@@ -441,13 +441,13 @@ public class Engine3D {
 			if (v1Inside && v2Inside) {
 				// Case 1: Both vertices are inside (keep v2)
 				outputVertices.add(v2);
-			} else if (v1Inside && !v2Inside) {
+			} else if (v1Inside) {
 				// Case 2: Going from inside to outside (keep intersection)
 				Vector3D intersection = intersectNearPlane(v1, v2);
 				if (intersection != null) {
 					outputVertices.add(intersection);
 				}
-			} else if (!v1Inside && v2Inside) {
+			} else if (v2Inside) {
 				// Case 3: Going from outside to inside (keep intersection and v2)
 				Vector3D intersection = intersectNearPlane(v1, v2);
 				if (intersection != null) {

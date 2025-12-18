@@ -32,7 +32,7 @@ import java.util.List;
  */
 public class Polyface3D {
 	final Vector3D[] vertices;//vertices shall be considered as immutable, in case value is changed, normal shall be re-computed again
-	Color color;
+	final Color color;
 	final Vector3D normal = new Vector3D();//value shall be updated in case of vertices are changed
 
 	public Polyface3D(Color color, Vector3D... vertices) {
@@ -207,7 +207,7 @@ public class Polyface3D {
 		double dist1 = v1ToPlanePoint.dot(planeNormal);
 		double dist2 = v2ToPlanePoint.dot(planeNormal);
 		
-		double t = 0.0;
+		double t;
 		double distDelta = dist2 - dist1;
 
 		// Check if segment is parallel to the plane (distDelta is small)

@@ -79,7 +79,7 @@ public class Color implements Dumpable {
 	}
 
     public String toString() {
-		int rgb = ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
+		int rgb = ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF));
         return String.format("#%06X", rgb & 0xFFFFFF);
     }
 

@@ -161,7 +161,7 @@ public class Mesh implements Dumpable {
 		return immutable_shapes.get(shape);
 	}
 
-//simple test to verify that all polygons in the mesh have same orientering
+//simple test to verify that all polygons in the mesh have same orientation
 	public boolean checkCorrectness() {
 		HashSet<Integer> segments = new HashSet<>();
 		int n_vertices = vertices.length;
@@ -195,7 +195,7 @@ public class Mesh implements Dumpable {
 				prev = vidx;
 			}
 		}
-		return segments.size() == 0;
+		return segments.isEmpty();
 	}
 
 //get number of unconnected parts
@@ -554,9 +554,9 @@ public class Mesh implements Dumpable {
 		mesh.put("id", id);
 		
 		JSONArray vert = new JSONArray();
-		for (int i = 0; i < vertices.length; i++) {
-			vert.add(vertices[i].save());
-		}
+        for (Vector3D vertex : vertices) {
+            vert.add(vertex.save());
+        }
 		mesh.put("vertices", vert);
 		JSONArray polys = new JSONArray();
 		for (Polygon3D polygon: polygons) {
