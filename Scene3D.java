@@ -24,8 +24,11 @@ DO NOT USE THIS SOFTWARE IF YOU DON'T AGREE WITH STATED CONDITIONS.
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Polygon;
+import java.awt.RenderingHints;
 import java.awt.event.*;
 import java.io.IOException;
 import java.io.File;
@@ -301,6 +304,8 @@ public class Scene3D extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g); // This clears the background and handles the automatic double buffering swap
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);			
 
 			long t0 = System.nanoTime();
 
@@ -311,6 +316,9 @@ public class Scene3D extends JFrame {
 			if (skyColor != null) {
 				g.setColor(skyColor);
 				g.fillRect(0, 0, getWidth(), horizonY);
+	            GradientPaint skyGradient = new GradientPaint(0, 0, skyColor, 0, horizonY, skyColor.brighter());
+	            g2d.setPaint(skyGradient);//apply gradient to make sky more "natural"
+	            g.fillRect(0, 0, getWidth(), horizonY);
 			}
 
 			// Render scene
