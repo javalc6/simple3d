@@ -100,6 +100,15 @@ public class Vector3D implements Dumpable {
 		return this;
 	}
 
+	/** In-place scalar division: this = this / scalar */
+	public Vector3D divide(double scalar) {
+		this.x /= scalar;
+		this.y /= scalar;
+		this.z /= scalar;
+		// w is usually left as 1.0 for points, but if it was 0 for a vector, it remains 0.
+		return this;
+	}
+
 	public double length() {
 		return Math.sqrt(x * x + y * y + z * z);
 	}

@@ -63,7 +63,8 @@ import simple3d.*;
  *
  * v1.0, 12-12-2025: first release
  * v1.0.1, 14-12-2025: added menu bar for file handling and help
- * v1.0.2, 17-12-2025: new shape regularPolygon and extrude polygons
+ *         17-12-2025: new shape regularPolygon and extrude polygons
+ *         22-12-2025: screen size is no longer passed to Engine3D
  */
 
 public class Scene3D extends JFrame {
@@ -77,6 +78,7 @@ public class Scene3D extends JFrame {
     private final Renderer canvas;
 
 	private final static double FOV = Math.toRadians(60); // Field of View
+    private final static double ASPECT_RATIO = (double) HEIGHT / WIDTH;
 
     public Scene3D(String title, Engine3D engine, Color skyColor, Color groundColor) {
 		this.engine = engine;
@@ -262,10 +264,8 @@ public class Scene3D extends JFrame {
     // --- Main Renderer Panel Class ---
     private class Renderer extends JPanel implements KeyListener {
 		final Scene3D scene3D;
-        // Scene constants
-        private final static double ASPECT_RATIO = (double) WIDTH / HEIGHT;
 
-        private double cameraYaw = 0.0; // Rotation around Y-axis (left/right)
+		private double cameraYaw = 0.0; // Rotation around Y-axis (left/right)
 //        private double cameraPitch = 0.0; // Rotation around X-axis (up/down)
         private final double moveSpeed = 0.5;
 
@@ -321,12 +321,19 @@ public class Scene3D extends JFrame {
 	            g.fillRect(0, 0, getWidth(), horizonY);
 			}
 
-			// Render scene
-			engine.render3D(cameraYaw, getWidth(), getHeight(), (projectedVertices, color) -> {
-				screenPoly.reset(); // Reset and reuse the pre-allocated AWT Polygon
-				for (Vector3D v : projectedVertices)
-					screenPoly.addPoint((int) v.x, (int) v.y);
+			int width = getWidth();
+			int height = getHeight();
 
+			// Render scene
+			engine.render3D(cameraYaw, (projectedVertices, color) -> {
+				screenPoly.reset(); // Reset and reuse the pre-allocated AWT Polygon
+				for (Vector3D v : projectedVertices) {
+					// X/Y are now in NDC space (-1 to +1). Scale to screen size.
+					int x = (int)((v.x + 1) * 0.5 * width);
+					// Note the y-flip for screen coordinates (y-down in AWT/Swing)
+					int y = (int)((1.0 - v.y) * 0.5 * height);
+					screenPoly.addPoint(x, y);
+				}
 				// Draw filled polygon with flat shaded color
 				g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue()));
 				g.fillPolygon(screenPoly);

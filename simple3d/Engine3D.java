@@ -53,6 +53,7 @@ import json.*;
  *
  * v1.0 12-12-2025: first release
  * v1.0.1 17-12-2025: added shapeArguments
+ *        22-12-2025: removed dependency on screen size
  */
 
 public class Engine3D {
@@ -164,7 +165,7 @@ public class Engine3D {
 	/**
      * Performs BSP Traversal to render the current scene
 	 */
-	public void render3D(double cameraYaw, int width, int height, BiConsumer<Vector3D[], Color> render) {
+	public void render3D(double cameraYaw, BiConsumer<Vector3D[], Color> render) {
 		// View-Projection Transform
 
 		// Camera Rotation Matrix (reused object)
@@ -204,8 +205,8 @@ public class Engine3D {
 				Vector3D v3 = worldPoly.vertices[2];
 
 				// Illumination (Flat Shading)
-				// polyCenter = (v1 + v2 + v3) * (1/3) (Reuse polyCenter object)
-				polyCenter.set(v1).add(v2).add(v3).multiply(1.0/3.0); // In-place operations
+				// polyCenter = (v1 + v2 + v3) /3 (Reuse polyCenter object)
+				polyCenter.set(v1).add(v2).add(v3).divide(3.0); // In-place operations
 				// lightDir = lightPos - polyCenter
 				light.lightPos.subtract(polyCenter, lightDir).normalize(); // In-place subtract and normalize
 
@@ -218,7 +219,7 @@ public class Engine3D {
 				int b = (int) (baseColor.getBlue() * lightColor.getBlue() * dp / 255);
 
 				// Transform & clip
-				Vector3D[] projectedVertices = transformAndScreenMap(worldPoly, matViewProj, width, height);
+				Vector3D[] projectedVertices = transformAndScreenMap(worldPoly, matViewProj);
 
 				// Apply the single-color flat shade to all resulting polygons
 				if (projectedVertices != null) {
@@ -374,7 +375,7 @@ public class Engine3D {
 	 * which is necessary since the resulting vertices are in screen space
 	 * and must be kept for the 'polygonsToDraw' list.
 	 */
-	protected Vector3D[] transformAndScreenMap(Polyface3D worldPoly, Matrix4x4 matViewProj, int width, int height) {
+	protected Vector3D[] transformAndScreenMap(Polyface3D worldPoly, Matrix4x4 matViewProj) {
 
 		Vector3D[] vertices = new Vector3D[worldPoly.vertices.length];
 		for (int i = 0; i < vertices.length; i++)
@@ -406,11 +407,6 @@ public class Engine3D {
 			v.x /= v.w;
 			v.y /= v.w;
 			v.z /= v.w;
-
-			// X/Y are now in NDC space (-1 to +1). Scale to screen size.
-			v.x = (v.x + 1) * 0.5 * width;
-			// Note the y-flip for screen coordinates (y-down in AWT/Swing)
-			v.y = (1.0 - v.y) * 0.5 * height;
 		}
 		
 		if (valid)
