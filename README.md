@@ -38,10 +38,10 @@ simple3d      -- 3d graphic engine
 json          -- Light and fast JSON library
 ```
 
-Interactive demo
-================
+Interactive demo (Java Swing)
+=============================
 
-The class Scene3D implements basic interactive demo of the features built in simple3d engine.
+The class Scene3D implements basic interactive demo of the features built in simple3d engine using Java Swing.
 Keyboard controls for camera movement using arrows(up/down/left/right) and shift key are included.
 Shift + up arrow: move camera higher; Shift + down arrow: move camera lower
 Shift + right arrow: rotate camera right; Shift + left arrow: rotate camera left
@@ -64,6 +64,22 @@ java Scene3D castles.json.gz    -- two castles
 java Scene3D pyramids.json.gz   -- two mayan pyramids
 ```
 
+Interactive demo (JavaFX)
+=========================
+The class Scene3DFX implements similar feature as class Scene3D using Java FX.
+This class benefits speed improvements via HW acceleration supported by Java FX.
+Here is benchmark using AMD Ryzen 7 8845HS on 512-spheres.gz (65536 polygons) running 32 frames:
+```
+Scene3D (Java Swing)
+rendering time, min = 32.3101 ms, current = 32.3101 ms, max = 168.11821 ms
+number of frames = 32 average rendering time = 68.33936 ms
+
+Scene3DFX (Java FX)
+rendering time, min = 13.0029 ms, current = 20.425 ms, max = 67.2186 ms
+number of frames = 32 average rendering time = 22.548052 ms
+```
+
+
 Usage
 =====
 The application has to instantiate the Engine3D, set-up light and camera position, sky and ground colors, build nodes and optionally meshes.
@@ -76,25 +92,28 @@ engine.setCameraPos(new Vector3D(0, 1.7, -10));
 The scene is described by nodes and meshes. Nodes are the objects to be rendered and hold the transformation, color and reference info to a mesh.
 Meshes are geometric structure of a 3D object composed of vertices (points) and faces (polygons) that define the object's surface shape.
 There are also built-in meshes called shapes that don't have to be defined, but are ready for use.
-In the following example a pyramid is added to the scene, performing both a scaling and a translation.
+In the following example a pyramid is added to the scene, performing both a scaling and a translation:
 ```
 Node pyramid = new Node("pyr1", Mesh.Shape.pyramid, simple3d.Color.parse("#009090"));
 pyramid.applyScale(1, 2, 1);
 pyramid.applyTranslation(0, 0, 5);
 sceneNodes.add(pyramid);
 ```
-After the preparation of the scene, the Engine3D has to be setup to build BSP.
+After the preparation of the scene, the Engine3D has to be setup to build BSP:
 ```
 engine.setupScene(FOV, ASPECT_RATIO);
 ```
 
-The rendering process is performed by invoking engine.render3D().
+The rendering process is performed by invoking engine.render3D():
 ```
-engine.render3D(cameraYaw, getWidth(), getHeight(), (projectedVertices, color) -> {
+engine.render3D(cameraYaw, (projectedVertices, color) -> {
 	screenPoly.reset();
-	for (Vector3D v : projectedVertices)
-		screenPoly.addPoint((int) v.x, (int) v.y);
-	g.setColor(new java.awt.Color(color.getRed(), color.getGreen(), color.getBlue()));
+	for (Vector3D v : projectedVertices) {
+		int x = (int)((v.x + 1) * 0.5 * width);
+		int y = (int)((1.0 - v.y) * 0.5 * height);
+		screenPoly.addPoint(x, y);
+	}
+	g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue()));
 	g.fillPolygon(screenPoly);
 });
 ```
