@@ -57,10 +57,6 @@ import simple3d.*;
  * Shift + up arrow: move camera higher; Shift + down arrow: move camera lower
  * Shift + right arrow: rotate camera right; Shift + left arrow: rotate camera left
  *
- * To run: Save as Scene3D.java, compile, and run:
- * javac Scene3D.java
- * java Scene3D
- *
  * v1.0, 12-12-2025: first release
  * v1.0.1, 14-12-2025: added menu bar for file handling and help
  *         17-12-2025: new shape regularPolygon and extrude polygons

@@ -198,15 +198,20 @@ public class Engine3D {
 				// Backface Culling (Check against the camera, as the poly is in world space)
 				Vector3D v1 = worldPoly.vertices[0];
 				v1.subtract(cameraPos, cameraRay); // cameraRay = v1 - cameraPos (In-place)
-				if (worldPoly.normal.dot(cameraRay) >= 0.0) {
+				if (worldPoly.normal.dot(cameraRay) >= 0.0)
 					continue;
-				}
-				Vector3D v2 = worldPoly.vertices[1];
-				Vector3D v3 = worldPoly.vertices[2];
+
+				// Transform & clip
+				Vector3D[] projectedVertices = transformAndScreenMap(worldPoly, matViewProj);
+				if (projectedVertices == null)
+					continue;
 
 				// Illumination (Flat Shading)
-				// polyCenter = (v1 + v2 + v3) /3 (Reuse polyCenter object)
-				polyCenter.set(v1).add(v2).add(v3).divide(3.0); // In-place operations
+				polyCenter.set(v1); //(Reuse polyCenter object)
+				int n_vertices = worldPoly.vertices.length;
+				for (int i = 1; i < n_vertices; i++)
+					polyCenter.add(worldPoly.vertices[i]);// In-place operations
+				polyCenter.divide(n_vertices); // In-place operations
 				// lightDir = lightPos - polyCenter
 				light.lightPos.subtract(polyCenter, lightDir).normalize(); // In-place subtract and normalize
 
@@ -218,13 +223,8 @@ public class Engine3D {
 				int g = (int) (baseColor.getGreen() * lightColor.getGreen() * dp / 255);
 				int b = (int) (baseColor.getBlue() * lightColor.getBlue() * dp / 255);
 
-				// Transform & clip
-				Vector3D[] projectedVertices = transformAndScreenMap(worldPoly, matViewProj);
-
-				// Apply the single-color flat shade to all resulting polygons
-				if (projectedVertices != null) {
-					render.accept(projectedVertices, new Color(r, g, b));
-				}
+				// Apply the single-color flat shade
+				render.accept(projectedVertices, new Color(r, g, b));
 			}
 		}
 	}
