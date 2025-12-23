@@ -92,25 +92,28 @@ engine.setCameraPos(new Vector3D(0, 1.7, -10));
 The scene is described by nodes and meshes. Nodes are the objects to be rendered and hold the transformation, color and reference info to a mesh.
 Meshes are geometric structure of a 3D object composed of vertices (points) and faces (polygons) that define the object's surface shape.
 There are also built-in meshes called shapes that don't have to be defined, but are ready for use.
-In the following example a pyramid is added to the scene, performing both a scaling and a translation.
+In the following example a pyramid is added to the scene, performing both a scaling and a translation:
 ```
 Node pyramid = new Node("pyr1", Mesh.Shape.pyramid, simple3d.Color.parse("#009090"));
 pyramid.applyScale(1, 2, 1);
 pyramid.applyTranslation(0, 0, 5);
 sceneNodes.add(pyramid);
 ```
-After the preparation of the scene, the Engine3D has to be setup to build BSP.
+After the preparation of the scene, the Engine3D has to be setup to build BSP:
 ```
 engine.setupScene(FOV, ASPECT_RATIO);
 ```
 
-The rendering process is performed by invoking engine.render3D().
+The rendering process is performed by invoking engine.render3D():
 ```
-engine.render3D(cameraYaw, getWidth(), getHeight(), (projectedVertices, color) -> {
+engine.render3D(cameraYaw, (projectedVertices, color) -> {
 	screenPoly.reset();
-	for (Vector3D v : projectedVertices)
-		screenPoly.addPoint((int) v.x, (int) v.y);
-	g.setColor(new java.awt.Color(color.getRed(), color.getGreen(), color.getBlue()));
+	for (Vector3D v : projectedVertices) {
+		int x = (int)((v.x + 1) * 0.5 * width);
+		int y = (int)((1.0 - v.y) * 0.5 * height);
+		screenPoly.addPoint(x, y);
+	}
+	g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue()));
 	g.fillPolygon(screenPoly);
 });
 ```
