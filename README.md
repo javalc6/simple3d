@@ -38,10 +38,10 @@ simple3d      -- 3d graphic engine
 json          -- Light and fast JSON library
 ```
 
-Interactive demo
-================
+Interactive demo (Java Swing)
+=============================
 
-The class Scene3D implements basic interactive demo of the features built in simple3d engine.
+The class Scene3D implements basic interactive demo of the features built in simple3d engine using Java Swing.
 Keyboard controls for camera movement using arrows(up/down/left/right) and shift key are included.
 Shift + up arrow: move camera higher; Shift + down arrow: move camera lower
 Shift + right arrow: rotate camera right; Shift + left arrow: rotate camera left
@@ -63,6 +63,22 @@ java Scene3D town.json.gz       -- a small town with a castle
 java Scene3D castles.json.gz    -- two castles
 java Scene3D pyramids.json.gz   -- two mayan pyramids
 ```
+
+Interactive demo (JavaFX)
+=========================
+The class Scene3DFX implements similar feature as class Scene3D using Java FX.
+This class benefits speed improvements via HW acceleration supported by Java FX.
+Here is benchmark using AMD Ryzen 7 8845HS on 512-spheres.gz (65536 polygons) running 32 frames:
+```
+Scene3D (Java Swing)
+rendering time, min = 32.3101 ms, current = 32.3101 ms, max = 168.11821 ms
+number of frames = 32 average rendering time = 68.33936 ms
+
+Scene3DFX (Java FX)
+rendering time, min = 13.0029 ms, current = 20.425 ms, max = 67.2186 ms
+number of frames = 32 average rendering time = 22.548052 ms
+```
+
 
 Usage
 =====
