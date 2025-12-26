@@ -31,8 +31,8 @@ simple3d      -- 3d graphic engine
   Engine3D    -- Main class, the engine itself
   BSPNode     -- Binary Space Partitioning tree builder
   Node        -- Object to be rendered
-  Mesh        -- Mesh is a collection of polygons
-  Polygon3D   -- 3D polygon with optional color
+  Mesh        -- Mesh is a collection of convex polygons
+  Polygon3D   -- 3D convex polygon with optional color
   Light3D     -- Light source
   Matrix4x4, Vector3D, Polyface3D, Dumpable, Color -- Utility classes
 json          -- Light and fast JSON library
@@ -90,7 +90,7 @@ engine.setLight(new Light3D(new simple3d.Color(255, 255, 255), 10, 20, -10));
 engine.setCameraPos(new Vector3D(0, 1.7, -10));
 ```
 The scene is described by nodes and meshes. Nodes are the objects to be rendered and hold the transformation, color and reference info to a mesh.
-Meshes are geometric structure of a 3D object composed of vertices (points) and faces (polygons) that define the object's surface shape.
+Meshes are geometric structure of a 3D object composed of vertices (points) and faces (convex polygons) that define the object's surface shape.
 There are also built-in meshes called shapes that don't have to be defined, but are ready for use.
 In the following example a pyramid is added to the scene, performing both a scaling and a translation:
 ```
@@ -106,13 +106,15 @@ engine.setupScene(FOV, ASPECT_RATIO);
 
 The rendering process is performed by invoking engine.render3D():
 ```
-engine.render3D(cameraYaw, (projectedVertices, color) -> {
+engine.render3D(cameraYaw, (projectedVertices, poly) -> {
 	screenPoly.reset();
-	for (Vector3D v : projectedVertices) {
+	for (Engine3D.ClippedVertex cv : projectedVertices) {
+        Vector3D v = cv.clipped;
 		int x = (int)((v.x + 1) * 0.5 * width);
 		int y = (int)((1.0 - v.y) * 0.5 * height);
 		screenPoly.addPoint(x, y);
 	}
+    simple3d.Color color = engine.getFlatShaderColor(poly);
 	g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue()));
 	g.fillPolygon(screenPoly);
 });
