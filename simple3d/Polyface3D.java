@@ -101,7 +101,7 @@ public class Polyface3D {
    public boolean isConvex() {
 		if (vertices.length < 3) return true;
 
-		Double initialSign = null; // Store the sign of the first cross product's dot product
+		Boolean initialSignPositive = null; // Store the sign of the first cross product's dot product
 
 		for (int i = 0; i < vertices.length; i++) {
 			// Get the three vertices that form the internal angle at v_i+1
@@ -121,10 +121,10 @@ public class Polyface3D {
 
 			// Check the sign of the dot product
 			if (Math.abs(dp) > EPSILON) { // Not collinear (non-zero angle)
-				double currentSign = Math.signum(dp);
-				if (initialSign == null) {
-					initialSign = currentSign;
-				} else if (Math.abs(initialSign - currentSign) > EPSILON) {
+				Boolean currentSignPositive = dp > 0;
+				if (initialSignPositive == null) {
+					initialSignPositive = currentSignPositive;
+				} else if (initialSignPositive != currentSignPositive) {
 					// The sign changed, indicating a concave angle (internal angle > 180 deg)
 					return false;
 				}
@@ -233,5 +233,33 @@ public class Polyface3D {
 		return new Vector3D(x, y, z, w);
 	}
 
+    /**
+     * Splits this polygon into a list of triangles using Fan Triangulation.
+	 * Polygon must be convex.
+     */
+    public List<Triangle> triangulateConvexPolygon() {
+        List<Triangle> triangles = new ArrayList<>();
+        if (vertices.length < 3)
+            return triangles;
+
+        Vector3D pivot = vertices[0];
+        for (int i = 1; i < vertices.length - 1; i++) {
+            Vector3D v1 = vertices[i];
+            Vector3D v2 = vertices[i + 1];
+            triangles.add(new Triangle(pivot, v1, v2));
+        }
+
+        return triangles;
+    }
+
+    public static class Triangle {
+        Vector3D a, b, c;
+
+        public Triangle(Vector3D a, Vector3D b, Vector3D c) {
+            this.a = a;
+            this.b = b;
+            this.c = c;
+        }
+    }
 
 }

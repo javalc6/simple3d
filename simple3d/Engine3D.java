@@ -54,6 +54,7 @@ import json.*;
  * v1.0 12-12-2025: first release
  * v1.0.1 17-12-2025: added shapeArguments
  *        22-12-2025: removed dependency on screen size
+ * v1.0.2 26-12-2025: added methods getFlatShaderColor() and getVertexShaderColor()
  */
 
 public class Engine3D {
@@ -133,7 +134,15 @@ public class Engine3D {
 // Consolidate all polygons into one list to build BSP tree
 		List<Polyface3D> allPolygons = new ArrayList<>();
 		for (Node node : sceneNodes) {
-			Mesh mesh = node.meshID == null ? Mesh.getShapeInstance(node.shape, node.shapeArguments) : meshes.get(node.meshID);
+			Mesh mesh;
+			if (node.meshID == null)
+				mesh = Mesh.getShapeInstance(node.shape, node.shapeArguments);
+			else {
+				mesh = meshes.get(node.meshID);
+				if (mesh == null) {
+					throw new RuntimeException("meshID " + node.meshID + " does not exist");
+				}
+			}
 			// Need to transform polygons to *World Space* before building the tree
 			for (Polygon3D poly : mesh.polygons) {
 				Vector3D[] vertices = new Vector3D[poly.vertex_indexes.length];
@@ -149,7 +158,7 @@ public class Engine3D {
 				}
 				Polyface3D worldPoly = new Polyface3D(color, vertices); // Base color comes from the original node polygon
 				if (!worldPoly.isConvex())
-					System.out.println("Warning: found not convex polygon in mesh " + poly.mesh.id);
+					System.out.println("Warning: found not convex polygon in mesh " + poly.mesh.id + ", 3D rendering might be wrong!");
 				allPolygons.add(worldPoly);
 			}
 		}
@@ -165,7 +174,7 @@ public class Engine3D {
 	/**
      * Performs BSP Traversal to render the current scene
 	 */
-	public void render3D(double cameraYaw, BiConsumer<Vector3D[], Color> render) {
+	public void render3D(double cameraYaw, BiConsumer<List<ClippedVertex>, Polyface3D> render) {
 		// View-Projection Transform
 
 		// Camera Rotation Matrix (reused object)
@@ -202,31 +211,67 @@ public class Engine3D {
 					continue;
 
 				// Transform & clip
-				Vector3D[] projectedVertices = transformAndScreenMap(worldPoly, matViewProj);
+				List<ClippedVertex> projectedVertices = transformAndScreenMap(worldPoly, matViewProj);
 				if (projectedVertices == null)
 					continue;
-
-				// Illumination (Flat Shading)
-				polyCenter.set(v1); //(Reuse polyCenter object)
-				int n_vertices = worldPoly.vertices.length;
-				for (int i = 1; i < n_vertices; i++)
-					polyCenter.add(worldPoly.vertices[i]);// In-place operations
-				polyCenter.divide(n_vertices); // In-place operations
-				// lightDir = lightPos - polyCenter
-				light.lightPos.subtract(polyCenter, lightDir).normalize(); // In-place subtract and normalize
-
-				double dp = Math.max(0.1, worldPoly.normal.dot(lightDir)); // Max between 0.1 (ambient) and the dot product
-
-				Color lightColor = light.color;
-				Color baseColor = worldPoly.color;
-				int r = (int) (baseColor.getRed() * lightColor.getRed() * dp / 255);
-				int g = (int) (baseColor.getGreen() * lightColor.getGreen() * dp / 255);
-				int b = (int) (baseColor.getBlue() * lightColor.getBlue() * dp / 255);
-
 				// Apply the single-color flat shade
-				render.accept(projectedVertices, new Color(r, g, b));
+				render.accept(projectedVertices, worldPoly);
 			}
 		}
+	}
+
+	/**
+     * Returns flat color shading
+	 */
+	public Color getFlatShaderColor(Polyface3D poly) {
+		// Illumination (Flat Shading)
+		polyCenter.set(poly.vertices[0]); //(Reuse polyCenter object)
+		int n_vertices = poly.vertices.length;
+		for (int i = 1; i < n_vertices; i++)
+			polyCenter.add(poly.vertices[i]);// In-place operations
+		polyCenter.divide(n_vertices); // In-place operations
+		// lightDir = lightPos - polyCenter
+		light.lightPos.subtract(polyCenter, lightDir).normalize(); // In-place subtract and normalize
+
+		double dp = Math.max(0.1, poly.normal.dot(lightDir)); // Max between 0.1 (ambient) and the dot product
+
+		Color lightColor = light.color;
+		Color baseColor = poly.color;
+		int r = (int) (baseColor.getRed() * lightColor.getRed() * dp / 255);
+		int g = (int) (baseColor.getGreen() * lightColor.getGreen() * dp / 255);
+		int b = (int) (baseColor.getBlue() * lightColor.getBlue() * dp / 255);
+
+		return new Color(r, g, b);
+	}
+
+	/**
+     * Returns vertices color shading, useful for Gouraud shading
+	 * TODO: for each vertex, the normal shall be calculated over all polygons sharing the vertex instead of using the normal of the current polygon
+	 * TODO: in case of interpolated vertex, calculate the color for the interpolated vertex instead of fallback to flat shade
+	 */
+	public Color[] getVertexShaderColor(List<ClippedVertex> projectedVertices, Polyface3D poly) {
+		int n_vertices = projectedVertices.size();
+		Color[] colors = new Color[n_vertices];
+	
+		// Illumination per vertex
+		for (int i = 0; i < n_vertices; i++) {
+			int polyVertexIndex = projectedVertices.get(i).polyVertexIndex;
+			if (polyVertexIndex == -1)
+				return null;//TODO: process interpolated vertex instead of fallback to flat shade
+
+			// lightDir = lightPos - vertex[i]
+			light.lightPos.subtract(poly.vertices[polyVertexIndex], lightDir).normalize(); // In-place subtract and normalize
+
+			double dp = Math.max(0.1, poly.normal.dot(lightDir)); // Max between 0.1 (ambient) and the dot product
+			Color lightColor = light.color;
+			Color baseColor = poly.color;
+			int r = (int) (baseColor.getRed() * lightColor.getRed() * dp / 255);
+			int g = (int) (baseColor.getGreen() * lightColor.getGreen() * dp / 255);
+			int b = (int) (baseColor.getBlue() * lightColor.getBlue() * dp / 255);
+
+			colors[i] = new Color(r, g, b);
+		}
+		return colors;
 	}
 
 	/**
@@ -371,11 +416,9 @@ public class Engine3D {
 
 	/**
 	 * Applies the View-Projection transform and scales vertices to screen coordinates.
-	 * The input worldPoly is copied and transformed to a new projectedPoly,
-	 * which is necessary since the resulting vertices are in screen space
-	 * and must be kept for the 'polygonsToDraw' list.
+	 * The input worldPoly is copied and transformed to a new projectedPoly.
 	 */
-	protected Vector3D[] transformAndScreenMap(Polyface3D worldPoly, Matrix4x4 matViewProj) {
+	protected List<ClippedVertex> transformAndScreenMap(Polyface3D worldPoly, Matrix4x4 matViewProj) {
 
 		Vector3D[] vertices = new Vector3D[worldPoly.vertices.length];
 		for (int i = 0; i < vertices.length; i++)
@@ -387,7 +430,7 @@ public class Engine3D {
             matViewProj.multiply(vertex, vertex); // In-place vector-matrix multiplication
 
 		// 2. Near-Plane Clipping (w = Z_NEAR)
-		Vector3D[] clippedVertices = clipPolygonAgainstPlane(vertices);
+		List<ClippedVertex> clippedVertices = clipPolygonAgainstPlane(vertices);
 
 		// If clipping resulted in no polygons, return null
 		if (clippedVertices == null)
@@ -395,7 +438,8 @@ public class Engine3D {
 
 		// 3. Perspective Divide and Screen Mapping
 		boolean valid = true;
-		for (Vector3D v : clippedVertices) {
+		for (ClippedVertex cv : clippedVertices) {
+			Vector3D v = cv.clipped;
 			// This check should now only happen if Z_NEAR was missed in clipping, or for the new vertices
 			// that should now be exactly on w = Z_NEAR.
 			if (v.w <= 0) { // Check for w=0 (division by zero) or w<0 (behind the camera)
@@ -417,13 +461,22 @@ public class Engine3D {
 
 // --- CLIPPING UTILITIES ---
 
+	public class ClippedVertex	{
+		public Vector3D clipped;
+		public int polyVertexIndex; //value -1 used for interpolated vertex, otherwise is the index in the parent worldPoly
+
+		public ClippedVertex(Vector3D clipped, int polyVertexIndex) {
+			this.clipped = clipped;
+			this.polyVertexIndex = polyVertexIndex;
+		}
+	}
+
 	/**
 	 * Clips a Polyface3D against the near plane (w >= Z_NEAR).
-	 * Returns a list of new polygons (0, 1, or 2) after clipping.
 	 * This is a simplified Sutherland-Hodgman for a single plane.
 	 */
-	protected Vector3D[] clipPolygonAgainstPlane(Vector3D[] inputVertices) {
-		List<Vector3D> outputVertices = new ArrayList<>();
+	protected List<ClippedVertex> clipPolygonAgainstPlane(Vector3D[] inputVertices) {
+		List<ClippedVertex> outputVertices = new ArrayList<>();
 		
 		// Loop over all edges of the input polygon
 		for (int i = 0; i < inputVertices.length; i++) {
@@ -436,20 +489,20 @@ public class Engine3D {
 
 			if (v1Inside && v2Inside) {
 				// Case 1: Both vertices are inside (keep v2)
-				outputVertices.add(v2);
+				outputVertices.add(new ClippedVertex(v2, (i + 1) % inputVertices.length));
 			} else if (v1Inside) {
 				// Case 2: Going from inside to outside (keep intersection)
 				Vector3D intersection = intersectNearPlane(v1, v2);
 				if (intersection != null) {
-					outputVertices.add(intersection);
+					outputVertices.add(new ClippedVertex(intersection, -1));
 				}
 			} else if (v2Inside) {
 				// Case 3: Going from outside to inside (keep intersection and v2)
 				Vector3D intersection = intersectNearPlane(v1, v2);
 				if (intersection != null) {
-					outputVertices.add(intersection);
+					outputVertices.add(new ClippedVertex(intersection, -1));
 				}
-				outputVertices.add(v2);
+				outputVertices.add(new ClippedVertex(v2, (i + 1) % inputVertices.length));
 			}
 			// Case 4: Both outside (keep nothing)
 		}
@@ -458,7 +511,7 @@ public class Engine3D {
 			return null; // Clipped away completely
 		
 		//return clipped vertices
-		return outputVertices.toArray(new Vector3D[0]);
+		return outputVertices;
 	}
 
 	private final static double EPSILON = 1e-5;

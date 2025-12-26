@@ -144,6 +144,11 @@ public class Vector3D implements Dumpable {
 		return new Vector3D(this.x, this.y, this.z, this.w);
 	}
 
+	@Override
+	public String toString() {
+		return "[" + this.x + ", " + this.y + ", " + this.z + ", " + this.w + "]";
+	}
+
 	protected Vector3D() {}
 	public void load(JSONValue data) {
 		JSONArray vector = (JSONArray) data;

@@ -51,6 +51,7 @@ public class Color implements Dumpable {
     public final static Color MAGENTA = new Color(255, 0, 255);
     public final static Color CYAN = new Color(0, 255, 255);
     public final static Color BLUE = new Color(0, 0, 255);
+    public final static Color BROWN = new Color(150, 75, 0);
 
     public int getRed() {
 		return r;
@@ -78,6 +79,17 @@ public class Color implements Dumpable {
 		b = rgb & 0xFF;
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (obj instanceof Color) {
+			Color other = (Color) obj;
+			return r == other.r && g == other.g && b == other.b;
+		}
+		return false;
+	}
+
+	@Override
     public String toString() {
 		int rgb = ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF));
         return String.format("#%06X", rgb & 0xFFFFFF);

@@ -321,9 +321,10 @@ public class Scene3D extends JFrame {
 			int height = getHeight();
 
 			// Render scene
-			engine.render3D(cameraYaw, (projectedVertices, color) -> {
+			engine.render3D(cameraYaw, (projectedVertices, poly) -> {
 				screenPoly.reset(); // Reset and reuse the pre-allocated AWT Polygon
-				for (Vector3D v : projectedVertices) {
+				for (Engine3D.ClippedVertex cv : projectedVertices) {
+					Vector3D v = cv.clipped;
 					// X/Y are now in NDC space (-1 to +1). Scale to screen size.
 					int x = (int)((v.x + 1) * 0.5 * width);
 					// Note the y-flip for screen coordinates (y-down in AWT/Swing)
@@ -331,6 +332,7 @@ public class Scene3D extends JFrame {
 					screenPoly.addPoint(x, y);
 				}
 				// Draw filled polygon with flat shaded color
+				simple3d.Color color = engine.getFlatShaderColor(poly);
 				g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue()));
 				g.fillPolygon(screenPoly);
 			});
@@ -430,6 +432,25 @@ public class Scene3D extends JFrame {
 		//Extruded Mesh
 		engine.addMesh(Mesh.extrudePolygonMesh("extruded", Mesh.getShapeInstance("regularPolygon", "{\"N\":6}"), 1.0));
 
+		// Plane
+		Node base = new Node("plane", Mesh.Shape.square, simple3d.Color.GRAY);
+		base.applyScale(20, 1, 20);
+		base.applyTranslation(0, 0, 5);
+		sceneNodes.add(base);
+
+		// regular polygons, example related to shapeArguments
+		try {
+			for (int k = 3; k < 9; k++) {
+				simple3d.Color[] colors = {simple3d.Color.MAGENTA, simple3d.Color.RED, simple3d.Color.YELLOW, simple3d.Color.GREEN, simple3d.Color.CYAN, simple3d.Color.BLUE};
+				Node poly = new Node("poly" + k, Mesh.Shape.regularPolygon, new JSONObject("{\"N\":"+ k + "}"), colors[k - 3]);
+				poly.applyRotationX(Math.toRadians(-90));
+				poly.applyScale(8.0 / k, 8.0 / k, 1);
+				poly.applyTranslation(-16.5 + k * 3, 3, 5);
+				sceneNodes.add(poly);
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 
 		// Pyramids
 		Node pyr1 = new Node("pyr1", Mesh.Shape.pyramid, simple3d.Color.parse("#009090")); // Teal
@@ -478,26 +499,6 @@ public class Scene3D extends JFrame {
 		sphere.applyTranslation(5, 0, 5);
 		sceneNodes.add(sphere);
 		
-
-		// Plane
-		Node base = new Node("plane", Mesh.Shape.square, simple3d.Color.GRAY);
-		base.applyScale(20, 1, 20);
-		base.applyTranslation(0, 0, 5);
-		sceneNodes.add(base);
-
-		// regular polygons, example related to shapeArguments
-		try {
-			for (int k = 3; k < 9; k++) {
-				simple3d.Color[] colors = {simple3d.Color.MAGENTA, simple3d.Color.RED, simple3d.Color.YELLOW, simple3d.Color.GREEN, simple3d.Color.CYAN, simple3d.Color.BLUE};
-				Node poly = new Node("poly" + k, Mesh.Shape.regularPolygon, new JSONObject("{\"N\":"+ k + "}"), colors[k - 3]);
-				poly.applyRotationX(Math.toRadians(-90));
-				poly.applyScale(8.0 / k, 8.0 / k, 1);
-				poly.applyTranslation(-16.5 + k * 3, 3, 5);
-				sceneNodes.add(poly);
-			}
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
 
 		// Extruded
 		Node extruded = new Node("extruded1", "extruded", simple3d.Color.RED);

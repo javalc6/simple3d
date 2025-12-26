@@ -28,6 +28,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.PixelWriter;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
@@ -62,9 +63,12 @@ import simple3d.*;
  * Shift + right arrow: rotate camera right; Shift + left arrow: rotate camera left
  *
  * v1.0, 23-12-2025: Scene3DFX first release
+ * v1.0.2 26-12-2025: added flag useGouraud, note that when this flag is true, anti-alias is not working due to PixelWriter
  */
 
 public class Scene3DFX extends Application {
+
+	private final static boolean useGouraud = false;
 
     private final static int WIDTH = 1000;
     private final static int HEIGHT = 500;
@@ -149,6 +153,8 @@ public class Scene3DFX extends Application {
 
     // --- Main Renderer ---
 	private void render(GraphicsContext gc) {
+		gc.setImageSmoothing(true);//anti-alias, works only if useGouraud=false
+
 		long t0 = System.nanoTime();
 
 		int height = (int) canvas.getHeight();
@@ -175,13 +181,14 @@ public class Scene3DFX extends Application {
 		}
 
         // Render 3D Scene via Engine
-        engine.render3D(cameraYaw, (projectedVertices, color) -> {
-            int n = projectedVertices.length;
+        engine.render3D(cameraYaw, (projectedVertices, poly) -> {
+            int n = projectedVertices.size();
             double[] xPoints = new double[n];
             double[] yPoints = new double[n];
 
 			int i = 0;
-            for (Vector3D v : projectedVertices) {
+            for (Engine3D.ClippedVertex cv : projectedVertices) {
+				Vector3D v = cv.clipped;
 				// X/Y are now in NDC space (-1 to +1). Scale to screen size.
                 xPoints[i] = (v.x + 1) * 0.5 * width;
 				// Note the y-flip for screen coordinates (y-down in AWT/Swing)
@@ -189,11 +196,27 @@ public class Scene3DFX extends Application {
 				i++;
             }
 
-            // Set color from engine (Map simple3d.Color to javafx.scene.paint.Color)
-            gc.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
-            gc.fillPolygon(xPoints, yPoints, n);
-
-		
+			if (useGouraud)	{
+	// Draw filled polygon with Gouraud shaded color
+				simple3d.Color[] colors = engine.getVertexShaderColor(projectedVertices, poly);
+				if (colors == null) {
+				// fall back: draw filled polygon with flat shaded color
+					simple3d.Color color = engine.getFlatShaderColor(poly);
+					gc.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
+					gc.fillPolygon(xPoints, yPoints, n);
+				} else {
+					Vertex[] vertices = new Vertex[n];
+					for (int j = 0; j < n; j++)	{
+						vertices[j] = new Vertex(xPoints[j], yPoints[j], Color.rgb(colors[j].getRed(), colors[j].getGreen(), colors[j].getBlue()));
+					}
+					gradientFillPolygon(canvas, vertices, height, width);
+				}
+			} else {
+	// Draw filled polygon with flat shaded color
+				simple3d.Color color = engine.getFlatShaderColor(poly);
+				gc.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
+				gc.fillPolygon(xPoints, yPoints, n);
+			}	
 		});
 		if (print_statistics) {
 			float delta_ms = (System.nanoTime() - t0) / 1000000f;
@@ -212,6 +235,50 @@ public class Scene3DFX extends Application {
 			System.out.println("current camera position = " + cameraPos.x + ", "+ cameraPos.y + "," + cameraPos.z);
 		}
     }
+
+	private class Vertex {
+		double x, y;
+		Color color;
+
+		Vertex(double x, double y, Color color) {
+			this.x = x;
+			this.y = y;
+			this.color = color;
+		}
+	}
+
+	private static void gradientFillPolygon(Canvas canvas, Vertex[] vertices, int height, int width) {
+		PixelWriter pw = canvas.getGraphicsContext2D().getPixelWriter();
+		Vertex pivot = vertices[0];
+		for (int i = 1; i < vertices.length - 1; i++) {
+			drawTriangle(pw, pivot, vertices[i], vertices[i + 1], height, width);
+		}
+	}
+
+	private static void drawTriangle(PixelWriter pw, Vertex v0, Vertex v1, Vertex v2, int height, int width) {
+
+		int minX = (int) Math.floor(Math.min(v0.x, Math.min(v1.x, v2.x)));
+		int maxX = (int) Math.ceil(Math.max(v0.x, Math.max(v1.x, v2.x)));
+		int minY = (int) Math.floor(Math.min(v0.y, Math.min(v1.y, v2.y)));
+		int maxY = (int) Math.ceil(Math.max(v0.y, Math.max(v1.y, v2.y)));
+
+		double denom = (v1.y - v2.y) * (v0.x - v2.x) + (v2.x - v1.x) * (v0.y - v2.y);
+
+		for (int y = Math.max(0, minY); y <= Math.min(maxY, height); y++) {
+			for (int x = Math.max(0, minX); x <= Math.min(maxX, width); x++) {
+
+				double w1 = ((v1.y - v2.y) * (x - v2.x) + (v2.x - v1.x) * (y - v2.y)) / denom;
+				double w2 = ((v2.y - v0.y) * (x - v2.x) + (v0.x - v2.x) * (y - v2.y)) / denom;
+				double w3 = 1 - w1 - w2;
+
+				if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+					Color interpolatedColor = v0.color.interpolate(v1.color, w2 / (w1 + w2)).interpolate(v2.color, w3);
+					pw.setColor(x, y, interpolatedColor);
+				}
+			}
+		}
+	}
+
 
 // -- setup Menu Bar --
     private MenuBar buildMenuBar(Stage stage) {
@@ -412,6 +479,26 @@ public class Scene3DFX extends Application {
 		engine.addMesh(Mesh.extrudePolygonMesh("extruded", Mesh.getShapeInstance("regularPolygon", "{\"N\":6}"), 1.0));
 
 
+		// Plane
+		Node base = new Node("plane", Mesh.Shape.square, simple3d.Color.GRAY);
+		base.applyScale(20, 1, 20);
+		base.applyTranslation(0, 0, 5);
+		sceneNodes.add(base);
+
+		// regular polygons, example related to shapeArguments
+		try {
+			for (int k = 3; k < 9; k++) {
+				simple3d.Color[] colors = {simple3d.Color.MAGENTA, simple3d.Color.RED, simple3d.Color.YELLOW, simple3d.Color.GREEN, simple3d.Color.CYAN, simple3d.Color.BLUE};
+				Node poly = new Node("poly" + k, Mesh.Shape.regularPolygon, new JSONObject("{\"N\":"+ k + "}"), colors[k - 3]);
+				poly.applyRotationX(Math.toRadians(-90));
+				poly.applyScale(8.0 / k, 8.0 / k, 1);
+				poly.applyTranslation(-16.5 + k * 3, 3, 5);
+				sceneNodes.add(poly);
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+
 		// Pyramids
 		Node pyr1 = new Node("pyr1", Mesh.Shape.pyramid, simple3d.Color.parse("#009090")); // Teal
 		pyr1.applyScale(1, 2, 1);
@@ -428,7 +515,7 @@ public class Scene3DFX extends Application {
 		cube.applyTranslation(2, 0, 0);
 		cube.applyScale(1, 3, 1);
 		sceneNodes.add(cube);
-		
+
 		Node cube2 = new Node("cube2", "mycube", simple3d.Color.GREEN);
 		cube2.setColorList(new simple3d.Color[]{simple3d.Color.BLUE});
 		cube2.applyTranslation(-2, 1, 0);
@@ -459,26 +546,6 @@ public class Scene3DFX extends Application {
 		sphere.applyTranslation(5, 0, 5);
 		sceneNodes.add(sphere);
 		
-
-		// Plane
-		Node base = new Node("plane", Mesh.Shape.square, simple3d.Color.GRAY);
-		base.applyScale(20, 1, 20);
-		base.applyTranslation(0, 0, 5);
-		sceneNodes.add(base);
-
-		// regular polygons, example related to shapeArguments
-		try {
-			for (int k = 3; k < 9; k++) {
-				simple3d.Color[] colors = {simple3d.Color.MAGENTA, simple3d.Color.RED, simple3d.Color.YELLOW, simple3d.Color.GREEN, simple3d.Color.CYAN, simple3d.Color.BLUE};
-				Node poly = new Node("poly" + k, Mesh.Shape.regularPolygon, new JSONObject("{\"N\":"+ k + "}"), colors[k - 3]);
-				poly.applyRotationX(Math.toRadians(-90));
-				poly.applyScale(8.0 / k, 8.0 / k, 1);
-				poly.applyTranslation(-16.5 + k * 3, 3, 5);
-				sceneNodes.add(poly);
-			}
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
 
 		// Extruded
 		Node extruded = new Node("extruded1", "extruded", simple3d.Color.RED);

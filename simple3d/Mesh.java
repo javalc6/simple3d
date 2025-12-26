@@ -250,6 +250,9 @@ public class Mesh implements Dumpable {
 		this.id = id;
 	}
 	private void sanityCheck() {
+		for (Vector3D vertex: vertices)
+			if (vertex == null)
+				throw new IllegalArgumentException("Null vertex found in mesh " + id);
 		for (Polygon3D polygon: polygons) {
 			if (polygon.vertex_indexes.length < 3)
 				throw new IllegalArgumentException("Incorrect polygon with only " + polygon.vertex_indexes.length + " vertices found in mesh " + id);
@@ -259,7 +262,7 @@ public class Mesh implements Dumpable {
 					throw new IllegalArgumentException("Incorrect polygon with too high vertex index " + vidx + " found in mesh " + id);
 				Vector3D difference = vertices[prev].subtract(vertices[vidx], new Vector3D(0, 0, 0));
 				double distance = difference.squaredMagnitude();
-				if (distance < EPSILON) throw new IllegalArgumentException("Incorrect polygon with too near consecutive vertices found in mesh " + id);
+				if (distance < EPSILON) throw new IllegalArgumentException("Incorrect polygon with too near consecutive vertices found in mesh " + id + ", conflict between vertices[" + prev + "]=" + vertices[prev] + " and vertices[" + vidx + "]=" + vertices[vidx]);
 				prev = vidx;
 			}
 
