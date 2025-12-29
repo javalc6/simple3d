@@ -182,6 +182,7 @@ public class Scene3DFX extends Application {
 
         // Render 3D Scene via Engine
         engine.render3D(cameraYaw, (projectedVertices, poly) -> {
+			gc.setLineWidth(1);
             int n = projectedVertices.size();
             double[] xPoints = new double[n];
             double[] yPoints = new double[n];
@@ -196,26 +197,22 @@ public class Scene3DFX extends Application {
 				i++;
             }
 
-			if (useGouraud)	{
+			simple3d.Color[] colors;
+			if (useGouraud && (colors = engine.getVertexShaderColor(projectedVertices, poly)) != null) {
 	// Draw filled polygon with Gouraud shaded color
-				simple3d.Color[] colors = engine.getVertexShaderColor(projectedVertices, poly);
-				if (colors == null) {
-				// fall back: draw filled polygon with flat shaded color
-					simple3d.Color color = engine.getFlatShaderColor(poly);
-					gc.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
-					gc.fillPolygon(xPoints, yPoints, n);
-				} else {
-					Vertex[] vertices = new Vertex[n];
-					for (int j = 0; j < n; j++)	{
-						vertices[j] = new Vertex(xPoints[j], yPoints[j], Color.rgb(colors[j].getRed(), colors[j].getGreen(), colors[j].getBlue()));
-					}
-					gradientFillPolygon(canvas, vertices, height, width);
+				Vertex[] vertices = new Vertex[n];
+				for (int j = 0; j < n; j++)	{
+					vertices[j] = new Vertex(xPoints[j], yPoints[j], Color.rgb(colors[j].getRed(), colors[j].getGreen(), colors[j].getBlue()));
 				}
+				gradientFillPolygon(canvas, vertices, height, width);
 			} else {
 	// Draw filled polygon with flat shaded color
-				simple3d.Color color = engine.getFlatShaderColor(poly);
-				gc.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
+				simple3d.Color scolor = engine.getFlatShaderColor(poly);
+				Color color = Color.rgb(scolor.getRed(), scolor.getGreen(), scolor.getBlue());
+				gc.setFill(color);
+				gc.setStroke(color);
 				gc.fillPolygon(xPoints, yPoints, n);
+				gc.strokePolygon(xPoints, yPoints, n);
 			}	
 		});
 		if (print_statistics) {

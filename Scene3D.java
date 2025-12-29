@@ -335,6 +335,7 @@ public class Scene3D extends JFrame {
 				simple3d.Color color = engine.getFlatShaderColor(poly);
 				g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue()));
 				g.fillPolygon(screenPoly);
+				g.drawPolygon(screenPoly);
 			});
 
 			if (print_statistics) {

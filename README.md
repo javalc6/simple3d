@@ -62,6 +62,7 @@ java Scene3D 512-spheres.gz     -- 512 colored tests, 65K polygons
 java Scene3D town.json.gz       -- a small town with a castle
 java Scene3D castles.json.gz    -- two castles
 java Scene3D pyramids.json.gz   -- two mayan pyramids
+java Scene3D mountain.gz        -- low-poly mountain with snow and grass
 ```
 
 Interactive demo (JavaFX)
@@ -130,5 +131,7 @@ Limitations of current release compared to version 1 of 3dscene_json.txt:
 Other screenshots
 =================
 ![Screenshot](images/512-spheres.png)
+
+![Screenshot](images/mountain.png)
 
 ![Screenshot](images/demo.png)
