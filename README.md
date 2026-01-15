@@ -85,7 +85,7 @@ Usage
 =====
 The application has to instantiate the Engine3D, set-up light and camera position, sky and ground colors, build nodes and optionally meshes.
 To learn how to use the simple3d engine look at Scene3D.java demo application.
-```
+```java
 Engine3D engine = new Engine3D(false);
 engine.setLight(new Light3D(new simple3d.Color(255, 255, 255), 10, 20, -10));
 engine.setCameraPos(new Vector3D(0, 1.7, -10));
@@ -94,19 +94,19 @@ The scene is described by nodes and meshes. Nodes are the objects to be rendered
 Meshes are geometric structure of a 3D object composed of vertices (points) and faces (convex polygons) that define the object's surface shape.
 There are also built-in meshes called shapes that don't have to be defined, but are ready for use.
 In the following example a pyramid is added to the scene, performing both a scaling and a translation:
-```
+```java
 Node pyramid = new Node("pyr1", Mesh.Shape.pyramid, simple3d.Color.parse("#009090"));
 pyramid.applyScale(1, 2, 1);
 pyramid.applyTranslation(0, 0, 5);
 sceneNodes.add(pyramid);
 ```
 After the preparation of the scene, the Engine3D has to be setup to build BSP:
-```
+```java
 engine.setupScene(FOV, ASPECT_RATIO);
 ```
 
 The rendering process is performed by invoking engine.render3D():
-```
+```java
 engine.render3D(cameraYaw, (projectedVertices, poly) -> {
 	screenPoly.reset();
 	for (Engine3D.ClippedVertex cv : projectedVertices) {
